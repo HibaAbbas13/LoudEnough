@@ -32,6 +32,8 @@ export interface Utterance {
   speaker: SpeakerLabel;
   text: string;
   words: Word[];
+  /** True when AssemblyAI had not yet committed to a speaker for this turn. */
+  speakerPending: boolean;
   /** Whether the agent judged itself to be the addressee. */
   addressed: boolean;
   /** 0..1 — how sure we are. Drives the UI's hedging. */

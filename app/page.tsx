@@ -19,6 +19,10 @@ export default function Page() {
     return (s: string) => map.get(s) ?? "var(--dim)";
   }, [room.speakers]);
 
+  // Amber means one thing only: the agent decided this was not for it.
+  const last = room.utterances[room.utterances.length - 1];
+  const holding = !!last && !last.addressed && !room.partial;
+
   const answered = room.utterances.filter((u) => u.addressed).length;
   const heldBack = room.utterances.length - answered;
 
@@ -72,7 +76,7 @@ export default function Page() {
       </section>
 
       <section className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 pb-3 pt-5">
-        <Waveform level={room.level} held={room.state === "listening" && !!room.partial} />
+        <Waveform level={room.level} held={holding} />
 
         <div className="mt-2 flex items-center justify-between border-t border-[var(--line)] pt-3">
           <div className="flex items-center gap-2">
@@ -130,7 +134,11 @@ export default function Page() {
             >
               <span
                 className="mt-1.5 size-2 shrink-0 rounded-full"
-                style={{ background: colorFor(u.speaker) }}
+                style={{
+                  background: u.speakerPending ? "transparent" : colorFor(u.speaker),
+                  boxShadow: u.speakerPending ? `inset 0 0 0 1.5px ${"var(--dim)"}` : undefined,
+                }}
+                title={u.speakerPending ? "Speaker not yet resolved" : `Speaker ${u.speaker}`}
               />
               <span className={`flex-1 text-[15px] leading-relaxed ${u.addressed ? "text-[var(--text)]" : "text-[var(--dim)]"}`}>
                 {u.text}

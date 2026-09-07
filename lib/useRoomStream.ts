@@ -5,6 +5,8 @@ import type { AgentState, ServerMessage, SpeakerLabel, Utterance } from "./types
 import { ADDRESS_THRESHOLD, scoreAddressing, type AddressContext } from "./addressing";
 
 const WS_BASE = "wss://streaming.assemblyai.com/v3/ws";
+// Placeholder label AssemblyAI sends before it has committed to a speaker.
+const UNRESOLVED = "PENDING";
 const SAMPLE_RATE = 16000;
 
 export interface RoomOptions {
@@ -30,6 +32,7 @@ export function useRoomStream(opts: RoomOptions) {
   const ctxRef = useRef<AudioContext | null>(null);
   const nodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const lastSpeaker = useRef<SpeakerLabel | null>(null);
   const lastVoiceAt = useRef<number>(0);
   const lastEndAt = useRef<number>(0);
   const utterRef = useRef<Utterance[]>([]);
@@ -52,6 +55,7 @@ export function useRoomStream(opts: RoomOptions) {
     ctxRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+    lastSpeaker.current = null;
     setConnected(false);
     setState("idle");
     setLevel(0);
@@ -125,9 +129,17 @@ export function useRoomStream(opts: RoomOptions) {
 
   function handleMessage(msg: ServerMessage) {
     if (msg.type === "Turn") {
-      const label = msg.speaker_label ?? "A";
+      // AssemblyAI emits "PENDING" while it is still deciding who spoke — it is
+      // a placeholder, not a person. Attribute those turns to whoever last held
+      // the floor and keep them out of the speaker rail entirely.
+      const raw = msg.speaker_label ?? UNRESOLVED;
+      const resolved = raw !== UNRESOLVED;
+      const label = resolved ? raw : (lastSpeaker.current ?? "A");
+      if (resolved) lastSpeaker.current = raw;
 
-      setSpeakers((prev) => (prev.includes(label) ? prev : [...prev, label]));
+      if (resolved) {
+        setSpeakers((prev) => (prev.includes(label) ? prev : [...prev, label]));
+      }
 
       if (!msg.end_of_turn) {
         setPartial(msg.transcript);
@@ -160,6 +172,7 @@ export function useRoomStream(opts: RoomOptions) {
         speaker: label,
         text: msg.transcript,
         words: msg.words ?? [],
+        speakerPending: !resolved,
         addressed: verdict.score >= ADDRESS_THRESHOLD,
         addressScore: verdict.score,
         reason: verdict.reason,
