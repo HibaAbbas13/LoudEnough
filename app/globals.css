@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
+/*
+  Palette is deliberately narrow: a near-black ground, one blue that means
+  "listening", and one amber that means "held back". Nothing else is allowed
+  to be saturated, so the waveform is always the loudest thing on screen.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ground: #0a0c10;
+  --surface: #12161f;
+  --surface-2: #171d28;
+  --line: #1e2533;
+  --text: #f2f5fa;
+  --muted: #8a94a6;
+  --dim: #5c6880;
+
+  --signal: #4f9cff;
+  --signal-bright: #7de7ff;
+  --patience: #f5a524;
+  --miss: #ff5c5c;
+
+  /* Speaker identity colours, assigned in order. Distinct in hue *and*
+     lightness so they survive greyscale and colour-blind viewing. */
+  --spk-a: #4f9cff;
+  --spk-b: #22c55e;
+  --spk-c: #f5a524;
+  --spk-d: #c084fc;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-dim: var(--dim);
+  --color-signal: var(--signal);
+  --color-signal-bright: var(--signal-bright);
+  --color-patience: var(--patience);
+  --color-miss: var(--miss);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  background: var(--ground);
+  color: var(--text);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04";
+}
+
+/* Numbers that have to be true are set in mono, always tabular so they
+   don't jitter as they update. */
+.num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+.breathing { animation: breathe 1.2s var(--ease) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .breathing { animation: none; opacity: 0.8; }
+  * { transition-duration: 0.01ms !important; }
 }

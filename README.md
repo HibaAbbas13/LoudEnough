@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Loud Enough
 
-## Getting Started
+**Every voice agent assumes exactly one user.** Put three people in a room and
+they all collapse — they answer when two humans are talking *to each other*,
+lose track of who asked what, and have no concept of whether they were even
+addressed.
 
-First, run the development server:
+Loud Enough is a voice agent built for a room instead of a headset. It uses
+AssemblyAI's streaming diarization to track who is speaking in real time, and
+an addressing engine to decide, per turn, whether it was spoken to at all.
+
+Built for the AssemblyAI Voice Agent Hackathon 2026.
+
+## What's actually novel here
+
+Most submissions use AssemblyAI as a microphone: speech in, text out, discard
+everything else. This uses the parts that make it different — live
+`speaker_label`s, per-word timings and confidence — as the product itself.
+
+The addressing engine (`lib/addressing.ts`) scores each finalised turn on cheap,
+explainable signals: direct address by name, imperatives, question form, second
+person, whether the agent just spoke, and whether the last few turns look like a
+human-to-human exchange. It's decisive at the edges at ~0ms and escalates only
+the genuinely ambiguous middle band to a model — so latency is spent only where
+it buys something.
+
+Every decision is inspectable in the UI. Click any line to see why it was
+answered or held back.
+
+## Setup
 
 ```bash
+cp .env.local.example .env.local   # add your AssemblyAI key
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Piece | File |
+|---|---|
+| Mic capture → PCM16 @ 16kHz | `public/pcm-processor.js` |
+| Temporary token minting (keeps the API key server-side) | `app/api/token/route.ts` |
+| Streaming socket + turn handling | `lib/useRoomStream.ts` |
+| Addressing engine | `lib/addressing.ts` |
+| Amplitude-driven waveform | `components/Waveform.tsx` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The waveform is driven by real mic amplitude, never a CSS animation.
