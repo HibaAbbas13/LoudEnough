@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import type { AgentState, ServerMessage, SpeakerLabel, Utterance } from "./types";
 import { ADDRESS_THRESHOLD, scoreAddressing, type AddressContext } from "./addressing";
+import { loadFixture, replayFixture, toFixture } from "./fixtures";
 
 const WS_BASE = "wss://streaming.assemblyai.com/v3/ws";
 // Placeholder label AssemblyAI sends before it has committed to a speaker.
@@ -33,6 +34,10 @@ export function useRoomStream(opts: RoomOptions) {
   const nodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const lastSpeaker = useRef<SpeakerLabel | null>(null);
+  // Raw server messages + arrival offsets, so a session can be replayed later.
+  const tape = useRef<{ t: number; msg: ServerMessage }[]>([]);
+  const tapeStart = useRef<number>(0);
+  const cancelReplay = useRef<(() => void) | null>(null);
   const lastVoiceAt = useRef<number>(0);
   const lastEndAt = useRef<number>(0);
   const utterRef = useRef<Utterance[]>([]);
@@ -93,7 +98,11 @@ export function useRoomStream(opts: RoomOptions) {
       ws.binaryType = "arraybuffer";
       wsRef.current = ws;
 
-      ws.onopen = () => setConnected(true);
+      ws.onopen = () => {
+        tape.current = [];
+        tapeStart.current = performance.now();
+        setConnected(true);
+      };
       ws.onerror = () => setError("Streaming connection failed.");
       ws.onclose = () => setConnected(false);
       ws.onmessage = (ev) => handleMessage(JSON.parse(ev.data) as ServerMessage);
@@ -128,6 +137,10 @@ export function useRoomStream(opts: RoomOptions) {
   }, [stop]);
 
   function handleMessage(msg: ServerMessage) {
+    if (tapeStart.current) {
+      tape.current.push({ t: Math.round(performance.now() - tapeStart.current), msg });
+    }
+
     if (msg.type === "Turn") {
       // AssemblyAI emits "PENDING" while it is still deciding who spoke — it is
       // a placeholder, not a person. Attribute those turns to whoever last held
@@ -188,9 +201,46 @@ export function useRoomStream(opts: RoomOptions) {
     }
   }
 
+  /** Replay a recorded session — no microphone, no socket, no spend. */
+  const replay = useCallback(async (name: string, speed = 4) => {
+    setError(null);
+    cancelReplay.current?.();
+    utterRef.current = [];
+    setUtterances([]);
+    setSpeakers([]);
+    lastSpeaker.current = null;
+    tapeStart.current = 0; // don't re-record a replay
+    try {
+      const fx = await loadFixture(name);
+      setConnected(true);
+      setState("listening");
+      cancelReplay.current = replayFixture(fx, handleMessage, {
+        speed,
+        onDone: () => { setConnected(false); setState("idle"); },
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+
+  /** Download the last session as a fixture to commit into public/fixtures. */
+  const exportFixture = useCallback((name: string) => {
+    if (!tape.current.length) return;
+    const blob = new Blob([JSON.stringify(toFixture(name, tape.current), null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${name}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, []);
+
   return {
     state, connected, error, partial, partialSpeaker,
     utterances, speakers, level, latencyMs,
     start, stop, nameSpeaker,
+    replay, exportFixture,
+    hasRecording: tape.current.length > 0,
   };
 }

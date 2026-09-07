@@ -95,12 +95,31 @@ export default function Page() {
           </div>
 
           {!room.connected ? (
-            <button
-              onClick={room.start}
-              className="rounded-lg bg-[var(--signal)] px-4 py-2 text-[13px] font-semibold text-[#04101f] transition-opacity hover:opacity-90"
-            >
-              Start listening
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Replay costs nothing — use it for every UI and prompt iteration. */}
+              <button
+                onClick={() => room.replay("sample-consult")}
+                className="rounded-lg border border-[var(--line)] px-3 py-2 text-[13px] font-medium text-[var(--muted)] hover:text-[var(--text)]"
+                title="Replay a recorded session — no microphone, no API spend"
+              >
+                Replay
+              </button>
+              {room.hasRecording && (
+                <button
+                  onClick={() => room.exportFixture("sample-consult")}
+                  className="rounded-lg border border-[var(--line)] px-3 py-2 text-[13px] font-medium text-[var(--muted)] hover:text-[var(--text)]"
+                  title="Save this session as a fixture"
+                >
+                  Save
+                </button>
+              )}
+              <button
+                onClick={room.start}
+                className="rounded-lg bg-[var(--signal)] px-4 py-2 text-[13px] font-semibold text-[#04101f] transition-opacity hover:opacity-90"
+              >
+                Start listening
+              </button>
+            </div>
           ) : (
             <button
               onClick={room.stop}
