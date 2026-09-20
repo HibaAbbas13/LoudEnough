@@ -124,3 +124,7 @@ and `prefers-reduced-motion` stops the animation while keeping the state legible
 | `DRAFT_MODEL` | no | Defaults to `claude-sonnet-5`. |
 
 Nothing is persisted. Close the tab and the conversation is gone.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
