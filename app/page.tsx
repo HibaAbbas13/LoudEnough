@@ -1,193 +1,238 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Waveform } from "@/components/Waveform";
-import { useRoomStream } from "@/lib/useRoomStream";
+import { useState } from "react";
+import { useVoiceAgent, type Draft } from "@/lib/assembly/useVoiceAgent";
+import { VoiceOrb } from "@/components/voice/VoiceOrb";
+import { StatusLine } from "@/components/voice/StatusLine";
+import { LiveTranscript } from "@/components/voice/LiveTranscript";
+import { BriefView } from "@/components/brief/BriefView";
+import { ActionPanel } from "@/components/brief/ActionPanel";
+import { MessageView } from "@/components/brief/MessageView";
+import { HowItWorks } from "@/components/landing/HowItWorks";
 
-const SPEAKER_COLORS = ["var(--spk-a)", "var(--spk-b)", "var(--spk-c)", "var(--spk-d)"];
-
+/**
+ * One page, four moments: the invitation, the listening, the understanding,
+ * and the thing you can send.
+ *
+ * They are not routes and not tabs. The wordmark shrinks, the orb moves up,
+ * and the brief rises underneath it — so the transition reads as the same
+ * conversation continuing rather than a wizard advancing. Nothing here is a
+ * dashboard, because at no point is the user administering anything.
+ */
 export default function Page() {
-  const [addressingEnabled, setAddressingEnabled] = useState(true);
-  const [agentName] = useState("Echo");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const v = useVoiceAgent();
+  // Which draft the user has stepped back from. Comparing against the current
+  // one means a newly written draft shows itself without an effect to sync it.
+  const [dismissed, setDismissed] = useState<Draft | null>(null);
 
-  const room = useRoomStream({ agentName, maxSpeakers: 3, addressingEnabled });
+  // Once a session has begun the huge type gets out of the way.
+  const opened = v.phase !== "idle" || v.said.length > 0 || v.stage !== "open";
 
-  const colorFor = useMemo(() => {
-    const map = new Map<string, string>();
-    room.speakers.forEach((s, i) => map.set(s, SPEAKER_COLORS[i % SPEAKER_COLORS.length]));
-    return (s: string) => map.get(s) ?? "var(--dim)";
-  }, [room.speakers]);
+  // "One thing I need to know…" — inferred from the agent actually asking.
+  const clarifying = v.agentLine.trim().endsWith("?");
 
-  // Amber means one thing only: the agent decided this was not for it.
-  const last = room.utterances[room.utterances.length - 1];
-  const holding = !!last && !last.addressed && !room.partial;
-
-  const answered = room.utterances.filter((u) => u.addressed).length;
-  const heldBack = room.utterances.length - answered;
+  const level = v.phase === "speaking" ? v.agentLevel : v.micLevel;
+  const showBrief = !!v.brief.problem;
+  const showMessage = !!v.draft && v.draft !== dismissed;
+  // Stepping back from a written draft has to land on the options again, so
+  // this keys off having an actionable brief rather than off the furthest
+  // stage reached — otherwise "something else" is a dead end.
+  const showActions =
+    (v.stage === "action" || v.stage === "complete") && !v.drafting && !showMessage;
+  // What the user is actually looking at, which after stepping back is no
+  // longer the same as how far they have got.
+  const viewStage = showMessage ? "complete" : showActions ? "action" : v.stage;
 
   return (
-    <main className="mx-auto min-h-dvh max-w-4xl px-8 py-12">
-      <header className="flex items-start justify-between">
-        <div>
-          <p className="eyebrow">AssemblyAI Voice Agent Hackathon · 2026</p>
-          <h1 className="mt-3 text-5xl font-bold tracking-tight">Loud Enough</h1>
-          <p className="mt-2 max-w-lg text-[15px] text-[var(--muted)]">
-            Every voice agent assumes one user. This one sits in a room, tracks who is
-            speaking, and answers only when it&apos;s actually being spoken to.
-          </p>
+    <>
+      <main
+        className={`relative z-10 flex min-h-dvh flex-col items-center px-6 pb-16 ${
+          opened ? "justify-start pt-10 sm:pt-14" : "justify-center py-10"
+        }`}
+      >
+        {/* Wordmark. Enormous until there is something more important on screen. */}
+        <header
+          className="w-full text-center transition-all duration-[900ms] ease-[var(--ease)]"
+          style={{
+            maxWidth: opened ? "100%" : "56rem",
+            marginBottom: opened ? "0.5rem" : "0",
+          }}
+        >
+          {opened ? (
+            <button
+              type="button"
+              onClick={v.reset}
+              className="label transition-colors hover:text-[var(--text-soft)]"
+              aria-label="Loud Enough — start over"
+            >
+              Loud Enough
+            </button>
+          ) : (
+            <>
+              <h1 className="fade font-medium leading-[0.84] tracking-[-0.045em] text-[clamp(3rem,min(16vw,13vh),8.5rem)]">
+                LOUD
+                <br />
+                ENOUGH
+              </h1>
+              <p className="said fade mt-5 text-[clamp(16px,2.4vh,21px)] italic leading-snug text-[var(--text-soft)]">
+                You don&rsquo;t have to know how to say it.
+              </p>
+              <p className="fade mx-auto mt-2.5 max-w-sm text-[13.5px] leading-relaxed text-[var(--text-faint)]">
+                Talk it out. We&rsquo;ll help you make sense of it.
+              </p>
+            </>
+          )}
+        </header>
+
+        {/* The voice object. Always the centre of the composition. */}
+        <div
+          className="flex shrink-0 flex-col items-center"
+          style={{ marginTop: opened ? "0.75rem" : "clamp(1rem, 3vh, 2rem)" }}
+        >
+          <VoiceOrb
+            phase={v.phase}
+            level={level}
+            disabled={v.phase === "connecting"}
+            onClick={() => (v.connected ? v.stop() : void v.start())}
+          />
+          <div className="mt-5">
+            <StatusLine
+              phase={v.phase}
+              stage={viewStage}
+              clarifying={clarifying}
+              drafting={v.drafting}
+            />
+          </div>
         </div>
-        {room.latencyMs !== null && (
-          <div className="text-right">
-            <div className="num text-2xl text-[var(--text)]">{room.latencyMs}<span className="text-sm text-[var(--dim)]">ms</span></div>
-            <p className="eyebrow mt-1">turn latency</p>
+
+        {/* Entry controls, only before anything has been said. */}
+        {!opened && (
+          <div className="fade mt-6 flex flex-col items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void v.start()}
+              className="rounded-md px-7 py-3 text-[15px] font-medium text-[var(--void)] transition-opacity hover:opacity-90"
+              style={{ background: "var(--signal)" }}
+            >
+              Start speaking
+            </button>
+            <button
+              type="button"
+              onClick={v.startDemo}
+              className="text-[13px] text-[var(--text-faint)] underline underline-offset-4 transition-colors hover:text-[var(--text-soft)]"
+            >
+              Try a demo &mdash; no microphone needed
+            </button>
           </div>
         )}
-      </header>
 
-      {/* The comparison toggle is the pitch, so it gets the weight. */}
-      <section className="mt-10 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5">
-        <div className="flex items-center justify-between gap-6">
-          <div>
-            <p className="text-sm font-medium">Addressing detection</p>
-            <p className="mt-1 text-[13px] text-[var(--muted)]">
-              {addressingEnabled
-                ? "Agent decides whether each turn was meant for it."
-                : "Naive mode — the agent answers every single turn, like every other voice agent."}
-            </p>
-          </div>
-          <button
-            onClick={() => setAddressingEnabled((v) => !v)}
-            role="switch"
-            aria-checked={addressingEnabled}
-            className="relative flex h-9 w-[188px] shrink-0 rounded-lg border border-[var(--line)] bg-[var(--ground)] p-1 text-[12px] font-medium"
+        {/* Errors, in human language, with a way out of every one. */}
+        {v.error && (
+          <div
+            role="alert"
+            className="fade mt-8 w-full max-w-md rounded-lg border px-5 py-4 text-center"
+            style={{ borderColor: "rgba(212,113,90,0.35)", background: "rgba(212,113,90,0.06)" }}
           >
-            <span
-              className="absolute inset-y-1 w-[88px] rounded-md bg-[var(--surface-2)] transition-transform duration-200"
-              style={{
-                transitionTimingFunction: "var(--ease)",
-                transform: addressingEnabled ? "translateX(90px)" : "translateX(0)",
-              }}
-            />
-            <span className={`relative z-10 grid flex-1 place-items-center ${!addressingEnabled ? "text-[var(--text)]" : "text-[var(--dim)]"}`}>Naive</span>
-            <span className={`relative z-10 grid flex-1 place-items-center ${addressingEnabled ? "text-[var(--signal)]" : "text-[var(--dim)]"}`}>Addressed</span>
-          </button>
-        </div>
-      </section>
-
-      <section className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 pb-3 pt-5">
-        <Waveform level={room.level} held={holding} />
-
-        <div className="mt-2 flex items-center justify-between border-t border-[var(--line)] pt-3">
-          <div className="flex items-center gap-2">
-            {room.speakers.length === 0 && (
-              <span className="text-[13px] text-[var(--dim)]">No speakers detected yet</span>
-            )}
-            {room.speakers.map((s) => (
-              <span
-                key={s}
-                className="flex items-center gap-1.5 rounded-md border border-[var(--line)] px-2 py-1 text-[12px]"
-              >
-                <i className="size-1.5 rounded-full" style={{ background: colorFor(s) }} />
-                Speaker {s}
-              </span>
-            ))}
-          </div>
-
-          {!room.connected ? (
-            <div className="flex items-center gap-2">
-              {/* Replay costs nothing — use it for every UI and prompt iteration. */}
+            <p className="text-[14px] leading-relaxed" style={{ color: "var(--warn)" }}>
+              {v.error}
+            </p>
+            <div className="mt-3 flex items-center justify-center gap-4">
               <button
-                onClick={() => room.replay("sample-consult")}
-                className="rounded-lg border border-[var(--line)] px-3 py-2 text-[13px] font-medium text-[var(--muted)] hover:text-[var(--text)]"
-                title="Replay a recorded session — no microphone, no API spend"
+                type="button"
+                onClick={() => void v.start()}
+                className="text-[13px] underline underline-offset-4"
+                style={{ color: "var(--warn)" }}
               >
-                Replay
+                Try again
               </button>
-              {room.hasRecording && (
+              {v.micDenied && (
                 <button
-                  onClick={() => room.exportFixture("sample-consult")}
-                  className="rounded-lg border border-[var(--line)] px-3 py-2 text-[13px] font-medium text-[var(--muted)] hover:text-[var(--text)]"
-                  title="Save this session as a fixture"
+                  type="button"
+                  onClick={v.startDemo}
+                  className="text-[13px] text-[var(--text-faint)] underline underline-offset-4 hover:text-[var(--text-soft)]"
                 >
-                  Save
+                  Continue without a microphone
                 </button>
               )}
-              <button
-                onClick={room.start}
-                className="rounded-lg bg-[var(--signal)] px-4 py-2 text-[13px] font-semibold text-[#04101f] transition-opacity hover:opacity-90"
-              >
-                Start listening
-              </button>
             </div>
-          ) : (
-            <button
-              onClick={room.stop}
-              className="rounded-lg border border-[var(--line)] px-4 py-2 text-[13px] font-medium text-[var(--muted)] hover:text-[var(--text)]"
-            >
-              Stop
-            </button>
-          )}
-        </div>
-      </section>
-
-      {room.error && (
-        <p className="mt-4 rounded-lg border border-[var(--miss)]/30 bg-[var(--miss)]/10 px-4 py-3 text-[13px] text-[var(--miss)]">
-          {room.error}
-        </p>
-      )}
-
-      {room.utterances.length > 0 && (
-        <p className="mt-8 text-[13px] text-[var(--muted)]">
-          <span className="num text-[var(--text)]">{answered}</span> answered ·{" "}
-          <span className="num text-[var(--patience)]">{heldBack}</span> held back
-        </p>
-      )}
-
-      <section className="mt-4 space-y-1">
-        {room.utterances.map((u) => (
-          <div key={u.id}>
-            <button
-              onClick={() => setOpenId(openId === u.id ? null : u.id)}
-              className="flex w-full gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface)]"
-            >
-              <span
-                className="mt-1.5 size-2 shrink-0 rounded-full"
-                style={{
-                  background: u.speakerPending ? "transparent" : colorFor(u.speaker),
-                  boxShadow: u.speakerPending ? `inset 0 0 0 1.5px ${"var(--dim)"}` : undefined,
-                }}
-                title={u.speakerPending ? "Speaker not yet resolved" : `Speaker ${u.speaker}`}
-              />
-              <span className={`flex-1 text-[15px] leading-relaxed ${u.addressed ? "text-[var(--text)]" : "text-[var(--dim)]"}`}>
-                {u.text}
-              </span>
-              <span
-                className={`num mt-0.5 shrink-0 text-[11px] ${u.addressed ? "text-[var(--signal)]" : "text-[var(--patience)]"}`}
-              >
-                {u.addressed ? "ANSWERED" : "HELD"} {(u.addressScore * 100).toFixed(0)}
-              </span>
-            </button>
-
-            {/* Inline expansion, not a modal — a voice app shouldn't seize the floor. */}
-            {openId === u.id && (
-              <p className="mb-2 ml-8 border-l border-[var(--line)] pl-3 text-[13px] text-[var(--muted)]">
-                {u.reason}
-              </p>
-            )}
-          </div>
-        ))}
-
-        {room.partial && (
-          <div className="flex gap-3 px-3 py-2.5">
-            <span
-              className="breathing mt-1.5 size-2 shrink-0 rounded-full"
-              style={{ background: colorFor(room.partialSpeaker ?? "A") }}
-            />
-            <span className="flex-1 text-[15px] leading-relaxed text-[var(--muted)]">{room.partial}</span>
           </div>
         )}
-      </section>
-    </main>
+
+        {/* Live transcript, while the understanding is still forming. */}
+        {opened && !showBrief && !v.error && (
+          <div className="mt-12 w-full">
+            <LiveTranscript
+              said={v.said}
+              partial={v.partial}
+              agentLine={v.agentLine}
+              speaking={v.phase === "speaking"}
+            />
+          </div>
+        )}
+
+        {/* What the agent said, kept on screen once the brief takes over the
+            transcript. Without this, everything the agent contributes is
+            audio-only, and the product stops working for anyone who can't
+            hear it. */}
+        {v.agentLine && showBrief && (
+          <p
+            className="fade mx-auto mt-9 max-w-md text-center text-[14px] leading-relaxed transition-colors duration-500"
+            style={{ color: v.phase === "speaking" ? "var(--signal)" : "var(--text-soft)" }}
+          >
+            {v.agentLine}
+          </p>
+        )}
+
+        {/* The understanding. */}
+        {showBrief && !showMessage && (
+          <div className="mt-10 w-full">
+            <BriefView brief={v.brief} />
+          </div>
+        )}
+
+        {showActions && (
+          <div className="mt-14 w-full border-t border-[var(--edge)] pt-12">
+            <ActionPanel onChoose={v.chooseAction} onReset={v.reset} busy={v.drafting} />
+          </div>
+        )}
+
+        {showMessage && v.draft && (
+          <div className="mt-14 w-full">
+            <MessageView
+              draft={v.draft}
+              onReset={v.reset}
+              onBack={() => setDismissed(v.draft)}
+            />
+          </div>
+        )}
+
+        {/* Proof the tools are real, not decorative. */}
+        {v.toolLog.length > 0 && (
+          <p className="label mt-10 text-center">
+            {v.toolLog.length} tool {v.toolLog.length === 1 ? "call" : "calls"} ·{" "}
+            {v.toolLog.map((t) => t.name).join(" · ")}
+          </p>
+        )}
+
+        {v.connected && opened && (
+          <button
+            type="button"
+            onClick={() => {
+              setDismissed(null);
+              v.reset();
+            }}
+            className="mt-10 text-[13px] text-[var(--text-faint)] underline underline-offset-4 transition-colors hover:text-[var(--text-soft)]"
+          >
+            End conversation
+          </button>
+        )}
+      </main>
+
+      {!opened && (
+        <div className="relative z-10 border-t border-[var(--edge)]">
+          <HowItWorks />
+        </div>
+      )}
+    </>
   );
 }

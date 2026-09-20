@@ -1,83 +1,160 @@
 @import "tailwindcss";
 
 /*
-  Palette is deliberately narrow: a near-black ground, one blue that means
-  "listening", and one amber that means "held back". Nothing else is allowed
-  to be saturated, so the waveform is always the loudest thing on screen.
+  Dark here is not a theme, it is a room with the lights down.
+
+  Everything on screen is either the voice object, the words someone said, or
+  a label — and the label always loses. One warm accent, used only for the
+  thing that is currently alive: the orb while listening, the primary action,
+  the moment a fact is confirmed. Never for decoration.
+
+  The accent is amber rather than the usual blue or violet because the product
+  is about being heard, and a warm light reads as attention where a cold one
+  reads as machinery.
 */
 :root {
-  --ground: #0a0c10;
-  --surface: #12161f;
-  --surface-2: #171d28;
-  --line: #1e2533;
-  --text: #f2f5fa;
-  --muted: #8a94a6;
-  --dim: #5c6880;
+  --void: #08080a;
+  --raised: #101014;
+  --sunk: #050506;
+  --edge: rgba(255, 255, 255, 0.07);
+  --edge-strong: rgba(255, 255, 255, 0.14);
 
-  --signal: #4f9cff;
-  --signal-bright: #7de7ff;
-  --patience: #f5a524;
-  --miss: #ff5c5c;
+  --text: #f3f1ed;
+  --text-soft: #9d9890;
+  --text-faint: #605c57;
 
-  /* Speaker identity colours, assigned in order. Distinct in hue *and*
-     lightness so they survive greyscale and colour-blind viewing. */
-  --spk-a: #4f9cff;
-  --spk-b: #22c55e;
-  --spk-c: #f5a524;
-  --spk-d: #c084fc;
+  --signal: #e8a054;
+  --signal-dim: rgba(232, 160, 84, 0.16);
+  --signal-glow: rgba(232, 160, 84, 0.3);
 
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --warn: #d4715a;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --slow: 900ms;
 }
 
 @theme inline {
-  --color-ground: var(--ground);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-line: var(--line);
+  --color-void: var(--void);
+  --color-raised: var(--raised);
+  --color-edge: var(--edge);
   --color-text: var(--text);
-  --color-muted: var(--muted);
-  --color-dim: var(--dim);
+  --color-text-soft: var(--text-soft);
+  --color-text-faint: var(--text-faint);
   --color-signal: var(--signal);
-  --color-signal-bright: var(--signal-bright);
-  --color-patience: var(--patience);
-  --color-miss: var(--miss);
+  --color-warn: var(--warn);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
   --font-mono: var(--font-mono);
 }
 
 html, body {
-  background: var(--ground);
+  background: var(--void);
   color: var(--text);
 }
 
 body {
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "cv02", "cv03", "cv04";
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
-/* Numbers that have to be true are set in mono, always tabular so they
-   don't jitter as they update. */
-.num {
+/* A serif for anything a person actually said. It is the one human thing on
+   the page and it should not be set in the same face as the UI chrome. */
+.said {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.label {
   font-family: var(--font-mono), ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-.eyebrow {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--dim);
+  color: var(--text-faint);
 }
 
-@keyframes breathe {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 1; }
+/* Atmosphere: a single soft light source above the fold, plus film grain.
+   Both are fixed and non-interactive so they never cost a hit test. */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
 }
-.breathing { animation: breathe 1.2s var(--ease) infinite; }
 
+.atmosphere::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  width: min(130vw, 1000px);
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    circle at center,
+    rgba(232, 160, 84, 0.075) 0%,
+    rgba(232, 160, 84, 0.022) 34%,
+    transparent 64%
+  );
+}
+
+.atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.16;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Text arriving: used for transcript lines and brief rows as they appear. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.rise { animation: rise 620ms var(--ease) both; }
+
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade { animation: fade var(--slow) var(--ease) both; }
+
+/* The caret that follows a live partial transcript. */
+@keyframes blink { 0%, 45% { opacity: 1; } 55%, 100% { opacity: 0; } }
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.12em;
+  background: var(--signal);
+  animation: blink 1.1s steps(1) infinite;
+}
+
+/* Focus that is visible on black without drawing a box around everything. */
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+::selection { background: var(--signal-dim); color: var(--text); }
+
+/* Every animation here reports system state, so with motion reduced the state
+   still has to be legible — hence opacity survives where movement does not. */
 @media (prefers-reduced-motion: reduce) {
-  .breathing { animation: none; opacity: 0.8; }
-  * { transition-duration: 0.01ms !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .caret { animation: none; opacity: 1; }
+}
+
+@media print {
+  .atmosphere, .no-print { display: none !important; }
+  html, body { background: #fff; color: #000; }
 }
