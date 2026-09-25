@@ -52,13 +52,8 @@ export default function Page() {
             </button>
           ) : (
             <>
-              <h1
-                className="fade w-full font-medium leading-[0.82] tracking-[-0.045em]"
-                style={{ fontSize: "min(calc((100vw - 3rem) / 4.05), calc((100dvh - 26rem) / 1.64))" }}
-              >
-                LOUD
-                <br />
-                ENOUGH
+              <h1 className="fade whitespace-nowrap font-medium leading-none tracking-[-0.04em] text-[clamp(1.85rem,6vw,4.25rem)]">
+                LOUD ENOUGH
               </h1>
               <p className="said fade mt-5 text-[clamp(16px,2.4vh,21px)] italic leading-snug text-[var(--text-soft)]">
                 You don&rsquo;t have to know how to say it.
