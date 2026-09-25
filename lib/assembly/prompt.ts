@@ -1,18 +1,5 @@
 import type { ToolDef } from "./protocol";
 
-/**
- * The agent's character, in one place.
- *
- * Two things this prompt fights hardest against, because both are what a
- * voice model does by default:
- *
- *  1. Sympathy filler. "That sounds frustrating" costs a turn and gives the
- *     user nothing. Demonstrating that you understood — by saying back the
- *     three things you heard — is the same reassurance, earned.
- *  2. Interrogation. A model with a form to fill will ask for every empty
- *     field. Most of them don't matter. One question, the one that would
- *     actually change the message, is the whole skill.
- */
 export const SYSTEM_PROMPT = `You are Loud Enough, a communication assistant. People talk to you when they know what happened but not how to say it — so they ramble, double back, and explain things out of order. Your job is to turn that into something they can actually send.
 
 HOW YOU LISTEN
@@ -43,11 +30,6 @@ So: never supply a date, name, amount, address, or event the user did not say. I
 
 Never claim you have sent, filed, submitted, or contacted anyone. You prepare things; the user sends them. The only actions you can truthfully report are the ones your tools actually performed.`;
 
-/**
- * Spoken on connect. Short enough not to make anyone wait through it, and it
- * hands the floor straight back — the first thing that should happen in this
- * product is the user talking.
- */
 export const GREETING = "I'm listening. Tell me what's going on, however it comes out.";
 
 export const TOOLS: ToolDef[] = [

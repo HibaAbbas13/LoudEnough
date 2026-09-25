@@ -3,19 +3,6 @@
 import { useState } from "react";
 import type { Brief, Grounded } from "@/lib/brief";
 
-/**
- * The understanding, made visible.
- *
- * Every row carries the user's own words underneath the agent's phrasing, and
- * those words were checked against the transcript before they got here. That
- * check is the product's central claim, so it is shown rather than asserted:
- * a verified row can be expanded to see the exact quote it rests on, and an
- * unverified one says so in plain language instead of being quietly dropped.
- *
- * Missing information is given the same visual weight as everything else. An
- * absence the system knows about is worth as much as a fact it has.
- */
-
 function Row({ label, field, delay }: { label: string; field: Grounded | null; delay: number }) {
   const [open, setOpen] = useState(false);
   if (!field) return null;

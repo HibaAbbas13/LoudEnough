@@ -6,19 +6,6 @@ import { fingerprint, readCache, writeCache, recordSpend } from "@/lib/spend";
 
 export const maxDuration = 45;
 
-/**
- * Writes the thing the user will actually send.
- *
- * The anti-hallucination guarantee is structural rather than instructional:
- * this route is handed only the fields that already passed the quote check in
- * lib/brief.ts, so there is no unverified material in the context for the
- * model to leak into the draft. It cannot repeat a date the user never said
- * because it was never told one.
- *
- * Sonnet rather than Opus: this sits inside a spoken conversation, where two
- * seconds of latency is felt and the task — rearranging supplied facts into a
- * civil paragraph — is not one Opus does better.
- */
 const MODEL = process.env.DRAFT_MODEL ?? "claude-sonnet-5";
 
 const DraftSchema = z.object({

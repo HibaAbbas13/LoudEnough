@@ -3,24 +3,6 @@
 import { useEffect, useRef } from "react";
 import type { Phase } from "@/lib/assembly/useVoiceAgent";
 
-/**
- * The voice object.
- *
- * Drawn on a canvas rather than animated in CSS, because it has to respond to
- * an actual audio signal: the outline is a closed curve whose radius is
- * modulated by a few slow harmonics, and the amplitude of those harmonics is
- * driven by real microphone or playback level. A CSS pulse would look similar
- * for about two seconds and then reveal itself as decoration, because it would
- * keep moving when the room went quiet.
- *
- * Each state changes one property rather than the whole look, so the object
- * reads as the same thing throughout:
- *   idle      slow breath, nothing else
- *   listening radius tracks your voice
- *   thinking  harmonics drift faster, amplitude stays low — motion without input
- *   speaking  radius tracks the agent's output, and the glow warms
- */
-
 const LOBES = [
   { k: 2, speed: 0.00021, weight: 1 },
   { k: 3, speed: -0.00017, weight: 0.48 },
@@ -35,16 +17,15 @@ export function VoiceOrb({
   size = "clamp(160px, 23vh, 280px)",
 }: {
   phase: Phase;
-  /** 0..1 — mic amplitude while listening, agent output while speaking. */
+
   level: number;
   onClick?: () => void;
   disabled?: boolean;
-  /** Any CSS length. Sized against viewport height so it never pushes the
-      primary action below the fold on a short window. */
+
   size?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  // Read through refs so the render loop never restarts mid-animation.
+
   const phaseRef = useRef(phase);
   const levelRef = useRef(level);
   useEffect(() => {
@@ -80,8 +61,7 @@ export function VoiceOrb({
       const h = box.height;
       const cx = w / 2;
       const cy = h / 2;
-      // Canvas is 2.2x the orb, so the body occupies a small fraction of it
-      // and the glow has room to reach zero well inside the bitmap.
+
       const base = Math.min(w, h) * 0.208;
 
       g.clearRect(0, 0, w, h);
@@ -89,15 +69,12 @@ export function VoiceOrb({
       const p = phaseRef.current;
       const live = p === "listening" || p === "speaking";
 
-      // Attack fast, release slow: a voice that stops should let the object
-      // settle rather than snap flat.
       const target = live ? Math.min(1, levelRef.current * 1.55) : 0;
       smoothed += (target - smoothed) * (target > smoothed ? 0.32 : 0.06);
 
       breath += reduced ? 0 : 0.0007;
       const breathe = Math.sin(breath) * 0.5 + 0.5;
 
-      // How far the outline is allowed to deform, by state.
       const deform =
         p === "thinking" ? 0.042 :
         p === "connecting" ? 0.018 :
@@ -109,8 +86,6 @@ export function VoiceOrb({
         live ? 1 + smoothed * 0.2 :
         0.982 + breathe * 0.036;
 
-      // Thinking spins the harmonics up without feeding them any amplitude,
-      // which is exactly what "working on it, not hearing you" should look like.
       const rate = p === "thinking" ? 5.5 : p === "connecting" ? 2.4 : 1;
       const time = reduced ? 0 : t * rate;
 
@@ -122,7 +97,6 @@ export function VoiceOrb({
         return base * scale * r;
       };
 
-      // Outer glow — the "soft light around the object".
       const glow = g.createRadialGradient(cx, cy, base * 0.6, cx, cy, base * 2.15);
       glow.addColorStop(0, `rgba(232, 160, 84, ${0.17 * warm + smoothed * 0.26})`);
       glow.addColorStop(0.45, `rgba(232, 160, 84, ${0.05 * warm})`);
@@ -130,7 +104,6 @@ export function VoiceOrb({
       g.fillStyle = glow;
       g.fillRect(0, 0, w, h);
 
-      // The body, as a closed cardinal-ish curve through sampled points.
       const STEPS = 96;
       const pts: [number, number][] = [];
       for (let i = 0; i < STEPS; i++) {
@@ -167,7 +140,6 @@ export function VoiceOrb({
       g.lineWidth = 1;
       g.stroke();
 
-      // A brighter inner core that only appears when there is real signal.
       if (smoothed > 0.01) {
         const core = g.createRadialGradient(cx, cy, 0, cx, cy, base * (0.42 + smoothed * 0.3));
         core.addColorStop(0, `rgba(255, 240, 220, ${smoothed * 0.4})`);

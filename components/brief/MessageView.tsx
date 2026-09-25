@@ -3,22 +3,12 @@
 import { useState } from "react";
 import type { Draft } from "@/lib/assembly/useVoiceAgent";
 
-/**
- * The finished thing, with its gaps left visible.
- *
- * Placeholders are rendered as gaps rather than filled with plausible defaults,
- * and they are highlighted rather than hidden. A message that invents "March
- * 14th" reads better and is worse — the user would send a date they never gave
- * us. Marking the hole is the honest version, and it also tells them exactly
- * what to do before hitting send.
- */
 const TITLES: Record<Draft["kind"], string> = {
   formal_message: "Ready to send",
   phone_script: "Ready to say",
   summary: "Your summary",
 };
 
-/** Splits on [BRACKETED] runs so they can be styled as real gaps. */
 function marked(body: string) {
   return body.split(/(\[[^\]]+\])/g).map((part, i) =>
     part.startsWith("[") && part.endsWith("]") ? (

@@ -10,9 +10,8 @@ import {
   EMPTY_BRIEF, groundedOnly, isActionable, verifyBrief, type Brief,
 } from "../brief";
 
-/** What the voice session is doing right now. Drives the orb. */
 export type Phase = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "error";
-/** How far the understanding has got. Drives the page layout. */
+
 export type Stage = "open" | "understood" | "action" | "complete";
 
 export type DraftKind = "formal_message" | "phone_script" | "summary";
@@ -27,22 +26,13 @@ export interface Draft {
 const b64 = (buf: ArrayBuffer) => {
   const bytes = new Uint8Array(buf);
   let s = "";
-  // Chunked: String.fromCharCode(...bytes) blows the call stack on long buffers.
+
   for (let i = 0; i < bytes.length; i += 0x8000) {
     s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   }
   return btoa(s);
 };
 
-/**
- * The demo streams a recorded clip into the socket in place of the microphone.
- *
- * Everything downstream is the live system: AssemblyAI transcribes it, its
- * turn detection decides when the speaker has finished, the agent replies out
- * loud and calls its tools, and the quotes it produces are checked against the
- * transcript the model actually returned. Nothing is replayed from a script —
- * only the audio source is swapped, which is what a demo recording is.
- */
 const DEMO_CLIP = "/demo/landlord.mp3";
 
 export function useVoiceAgent() {
@@ -76,21 +66,17 @@ export function useVoiceAgent() {
   const playing = useRef<AudioBufferSourceNode[]>([]);
   const raf = useRef(0);
 
-  // Everything the user has actually said, for the grounding check.
   const spoken = useRef("");
   const briefRef = useRef<Brief>(EMPTY_BRIEF);
-  // Tool results must be sent only when reply.done is the newest event seen.
+
   const lastEvent = useRef<string>("");
-  // Demo mode: a recorded clip is streamed in place of live microphone audio.
+
   const clip = useRef<string | null>(null);
   const clipStop = useRef<(() => void) | null>(null);
   const pending = useRef<{ call_id: string; result: unknown; is_error?: boolean }[]>([]);
   const phaseRef = useRef<Phase>("idle");
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
-  // Amplitude arrives ~60x a second. Rendering the page that often to move a
-  // canvas nobody diffs is waste, so values are quantised and only committed
-  // when they actually change a visible step.
   const step = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 40) / 40;
   const setMic = useCallback((v: number) => {
     setMicLevel((p) => (step(p) === step(v) ? p : step(v)));
@@ -103,7 +89,6 @@ export function useVoiceAgent() {
     if (ws.current?.readyState === WebSocket.OPEN) ws.current.send(JSON.stringify(e));
   }, []);
 
-  /** Cut playback dead. Called on barge-in so no stale agent speech survives. */
   const flushPlayback = useCallback(() => {
     for (const s of playing.current) { try { s.stop(); } catch {} }
     playing.current = [];
@@ -158,7 +143,6 @@ export function useVoiceAgent() {
     pending.current = [];
   }, [send]);
 
-  /** Writes the message from the verified brief only. */
   const runDraft = useCallback(async (kind: DraftKind, recipient?: string) => {
     const b = briefRef.current;
     if (!b.problem) {
@@ -201,8 +185,6 @@ export function useVoiceAgent() {
         setStage((s) => (s === "open" ? "understood" : s));
         if (isActionable(verified)) setStage((s) => (s === "complete" ? s : "action"));
 
-        // Hand the grounding result back so the agent can correct itself rather
-        // than repeat an unverifiable claim.
         const bad = ([
           ["problem", verified.problem], ["history", verified.history],
           ["impact", verified.impact], ["desired_outcome", verified.desiredOutcome],
@@ -234,17 +216,6 @@ export function useVoiceAgent() {
     [runDraft],
   );
 
-  /**
-   * Streams a recorded clip into the socket at real time, in the same 50 ms
-   * PCM16 frames the microphone produces.
-   *
-   * Pacing matters: dumping the whole file at once would give the server 23
-   * seconds of audio in one burst, and its turn detection would have nothing
-   * to measure a pause against. Sent at the rate it was spoken, the clip is
-   * indistinguishable from a live speaker, which is the point — the demo
-   * exercises the real transcription and turn-taking path, not a shortcut
-   * around it.
-   */
   const streamClip = useCallback(async (url: string) => {
     const c = ctx.current;
     const socket = ws.current;
@@ -253,7 +224,7 @@ export function useVoiceAgent() {
     let samples: Float32Array;
     try {
       const bytes = await fetch(url).then((r) => r.arrayBuffer());
-      // Decoding in a 24 kHz context resamples the clip for us.
+
       const off = new OfflineAudioContext(1, 1, SAMPLE_RATE);
       const buf = await off.decodeAudioData(bytes);
       samples = buf.getChannelData(0);
@@ -263,7 +234,7 @@ export function useVoiceAgent() {
       return;
     }
 
-    const FRAME = SAMPLE_RATE / 20; // 50 ms
+    const FRAME = SAMPLE_RATE / 20;
     let i = 0;
     let cancelled = false;
     clipStop.current = () => { cancelled = true; };
@@ -309,11 +280,9 @@ export function useVoiceAgent() {
 
         case "input.speech.started":
           lastEvent.current = "input.speech.started";
-          // A non-fatal error left the banner up while the session carried on.
-          // Speaking again is the user retrying, so the warning goes.
+
           setError(null);
-          // Cut playback the moment speech is detected, rather than waiting for
-          // reply.done. That round trip is the second that makes it feel like a form.
+
           if (phaseRef.current === "speaking" || playing.current.length > 0) {
             flushPlayback();
             setCutIn(true);
@@ -322,7 +291,7 @@ export function useVoiceAgent() {
           break;
 
         case "transcript.user.delta":
-          // `text` is the full transcript so far for this item — replace, never append.
+
           setPartial(msg.text);
           break;
 
@@ -345,7 +314,7 @@ export function useVoiceAgent() {
         case "reply.audio": {
           const c = ctx.current;
           if (!c) break;
-          // `reply.audio` carries audio in `data`; `input.audio` uses `audio`.
+
           const raw = atob(msg.data);
           const pcm = new Int16Array(raw.length / 2);
           for (let i = 0; i < pcm.length; i++) {
@@ -382,7 +351,7 @@ export function useVoiceAgent() {
           lastEvent.current = "reply.done";
           if (msg.status === "interrupted") {
             flushPlayback();
-            pending.current = []; // the agent moved on; stale results would confuse it
+            pending.current = [];
             setCutIn(true);
           } else {
             flushTools();
@@ -396,7 +365,7 @@ export function useVoiceAgent() {
             const failed = typeof result === "object" && result !== null && "ok" in result
               && (result as { ok: boolean }).ok === false;
             pending.current.push({ call_id: msg.call_id, result, is_error: failed });
-            // The tool may have finished after reply.done already fired.
+
             flushTools();
           })();
           break;
@@ -444,10 +413,9 @@ export function useVoiceAgent() {
         stream.current = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
-            // Without this the agent hears itself through the speakers and
-            // interrupts every one of its own replies.
+
             echoCancellation: true,
-            // The server denoises already; a second pass costs accuracy.
+
             noiseSuppression: false,
             autoGainControl: true,
           },
@@ -467,8 +435,6 @@ export function useVoiceAgent() {
       }
     }
 
-    // Device-default rate, resampled in the worklet: the only pipeline that
-    // keeps echo cancellation intact on Firefox and correct pitch on Safari.
     const c = new AudioContext();
     ctx.current = c;
     await c.resume();
@@ -486,25 +452,19 @@ export function useVoiceAgent() {
     alive.current = true;
 
     socket.onopen = () => {
-      // Sent immediately, before session.ready. Inline config rather than a
-      // stored agent so the prompt and tools live in this repo, versioned with
-      // the UI they drive, and the app runs from a clone with no publish step.
+
       send({
         type: "session.update",
         session: {
           system_prompt: SYSTEM_PROMPT,
-          // In demo mode the clip starts immediately, so a greeting would
-          // just talk over it.
+
           ...(opts.clip ? {} : { greeting: GREETING }),
           tools: TOOLS,
           input: {
             format: { encoding: "audio/pcm" },
             transcription_mode: "min_latency",
             turn_detection: {
-              // People telling a difficult story pause mid-sentence to find the
-              // words. A short silence window would cut them off constantly, so
-              // this waits considerably longer than a command-and-control agent
-              // would before deciding a turn is over.
+
               min_silence: 900,
               max_silence: 3500,
               interrupt_response: true,
@@ -545,15 +505,12 @@ export function useVoiceAgent() {
         }
       };
 
-      // A worklet only runs while something pulls it, so it needs a sink —
-      // muted, or the user hears their own voice on a half-second delay.
       const mute = c.createGain();
       mute.gain.value = 0;
       sinkGain.current = mute;
       src.connect(worklet).connect(mute).connect(c.destination);
     }
 
-    // Agent output amplitude, read from the real playback graph.
     const bins = new Uint8Array(an.frequencyBinCount);
     const tick = () => {
       an.getByteTimeDomainData(bins);
@@ -573,7 +530,6 @@ export function useVoiceAgent() {
     setPhase("idle");
   }, [cleanup]);
 
-  /** Force a reply when the user is done talking, instead of waiting on silence. */
   const finishTurn = useCallback(() => {
     if (!alive.current) return;
     send({
@@ -601,22 +557,14 @@ export function useVoiceAgent() {
     setCutIn(false);
   }, [cleanup]);
 
-  /**
-   * A real session with a recorded clip in place of the microphone, for anyone
-   * without a working mic — or evaluating on a machine where speaking aloud
-   * isn't practical. The transcript on screen is produced live by AssemblyAI
-   * from that audio, not read from a file.
-   */
   const startDemo = useCallback(() => {
     void start({ mic: false, clip: DEMO_CLIP });
   }, [start]);
 
-  /** Manual action buttons use the same path the spoken request does. */
   const chooseAction = useCallback((kind: DraftKind) => { void runDraft(kind); }, [runDraft]);
 
   useEffect(() => {
-    // pagehide fires on tab close and navigation, and unlike beforeunload it is
-    // reliable on mobile Safari. Must be synchronous — an await never lands.
+
     const bye = () => {
       if (ws.current?.readyState === WebSocket.OPEN) {
         ws.current.send(JSON.stringify({ type: "session.end" }));

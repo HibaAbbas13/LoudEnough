@@ -1,10 +1,4 @@
-/**
- * The architecture, for anyone evaluating it.
- *
- * Kept to four steps and one sentence each. A judge should be able to work out
- * what is actually happening in about fifteen seconds without the page turning
- * into documentation.
- */
+
 const STEPS = [
   {
     n: "01",

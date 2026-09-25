@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
+  "description": "A voice agent that turns messy speech into a message you can actually send.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HibaAbbas13/LoudEnough.git"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

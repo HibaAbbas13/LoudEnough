@@ -1,15 +1,5 @@
 import { NextResponse } from "next/server";
 
-/**
- * Mints a short-lived Voice Agent token so the permanent key never reaches
- * the browser. A WebSocket handshake can't carry an Authorization header, so
- * the client passes this as ?token= instead.
- *
- * Two things differ from the rest of AssemblyAI and both are easy to get
- * wrong: this product wants `Authorization: Bearer <key>` (the streaming STT
- * API takes the raw key), and the tokens are single-use — one token opens
- * exactly one session, so the client refetches on every connect.
- */
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -23,8 +13,7 @@ export async function GET() {
 
   const url = new URL("https://agents.assemblyai.com/v1/token");
   url.searchParams.set("expires_in_seconds", "300");
-  // A conversation that gets abandoned with the tab open shouldn't bill for
-  // three hours. Twenty minutes is far longer than anyone needs here.
+
   url.searchParams.set("max_session_duration_seconds", "1200");
 
   try {
@@ -34,7 +23,7 @@ export async function GET() {
     });
 
     if (!res.ok) {
-      // The upstream body can contain account detail — log it, don't ship it.
+
       console.error(`[voice-token] ${res.status}: ${await res.text()}`);
       return NextResponse.json(
         { error: "Couldn't reach the voice service. Try again in a moment." },

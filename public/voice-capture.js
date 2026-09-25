@@ -1,18 +1,4 @@
-/**
- * Microphone capture for the Voice Agent API: Float32 -> PCM16 at 24 kHz.
- *
- * The obvious shortcut is `new AudioContext({ sampleRate: 24000 })` and no
- * resampling, but it only works in Chromium. Firefox honours the rate while
- * quietly routing that context around its echo canceller — so the agent hears
- * its own voice through the speakers and interrupts itself on every reply —
- * and Safari ignores the option entirely, running at 48 kHz and producing
- * chipmunked audio. So the context stays at the device rate and the
- * conversion happens here, where it is the same three lines on every browser.
- *
- * Also reports a peak amplitude per block. That number drives the orb on
- * screen, which is why it is measured from the real signal here rather than
- * approximated with a CSS animation.
- */
+
 class VoiceCapture extends AudioWorkletProcessor {
   constructor(options) {
     super();
@@ -34,8 +20,6 @@ class VoiceCapture extends AudioWorkletProcessor {
       if (a > peak) peak = a;
     }
 
-    // Still report level while muted so the UI can show the mic is live and
-    // simply not being sent — a silent orb would read as a broken microphone.
     if (this.muted) {
       this.port.postMessage({ peak, audio: null });
       return true;

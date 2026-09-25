@@ -15,8 +15,11 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 and press **Start speaking**. No microphone? There's
-a demo that streams a recording through the same pipeline.
+Open http://localhost:3000 and press **Start speaking**. No microphone? **Try a demo**
+streams a recording through the same pipeline — transcription, turn-taking, the brief,
+and the message are all live.
+
+A walkthrough of that demo is in [`public/demo/walkthrough.mp4`](public/demo/walkthrough.mp4).
 
 ## The interaction
 

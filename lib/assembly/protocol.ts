@@ -1,19 +1,8 @@
-/**
- * The Voice Agent API wire protocol, typed.
- *
- * Deliberately hand-written from the current event reference rather than
- * inferred from an SDK: the two field names that bite are `input.audio.audio`
- * (client -> server) and `reply.audio.data` (server -> client), and a typed
- * union is the cheapest way to stop that asymmetry becoming a silent bug.
- *
- * Endpoint: wss://agents.assemblyai.com/v1/ws?token=<temp token>
- * Audio:    PCM16 mono 24 kHz, base64 inside JSON — not binary frames.
- */
+
 
 export const AGENT_WS = "wss://agents.assemblyai.com/v1/ws";
 export const SAMPLE_RATE = 24_000;
 
-/** Tool definitions use a flat schema — not OpenAI's nested `function` form. */
 export interface ToolDef {
   type: "function";
   name: string;
@@ -69,11 +58,6 @@ export type ServerEvent =
   | { type: "session.error"; code: string; message: string }
   | { type: "error"; message: string };
 
-/**
- * Error codes arrive in two casings depending on where in the lifecycle they
- * are raised (handshake codes shout, client-message codes don't), so callers
- * should compare case-insensitively.
- */
 export function isFatal(code: string): boolean {
   return [
     "unauthorized", "forbidden", "server_error", "internal_error",
@@ -82,7 +66,6 @@ export function isFatal(code: string): boolean {
   ].includes(code.toLowerCase());
 }
 
-/** Raw API failures are never shown to a user — they get this instead. */
 export function humanError(code: string, message: string): string {
   switch (code.toLowerCase()) {
     case "unauthorized":

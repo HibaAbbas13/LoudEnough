@@ -2,22 +2,15 @@
 
 import type { Phase, Stage } from "@/lib/assembly/useVoiceAgent";
 
-/**
- * One line of text that always says what the system is doing.
- *
- * It is also the screen-reader channel for the whole voice interaction, which
- * is why it is a live region: someone who can't see the orb breathing still
- * needs to know whether they are being heard.
- */
 export function StatusLine({
   phase, stage, clarifying, drafting, cutIn,
 }: {
   phase: Phase;
   stage: Stage;
-  /** The agent's last reply was a question. */
+
   clarifying: boolean;
   drafting: boolean;
-  /** The user spoke over the agent and playback was cut. */
+
   cutIn: boolean;
 }) {
   let text: string;

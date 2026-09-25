@@ -2,14 +2,6 @@
 
 import type { DraftKind } from "@/lib/assembly/useVoiceAgent";
 
-/**
- * The turn from understanding into something usable.
- *
- * These buttons exist because the voice path shouldn't be the only path —
- * they call exactly the same function the agent's draft_message tool calls,
- * so a judge with a broken microphone still reaches the same output. Saying
- * "write it up" out loud and clicking here are the same code path.
- */
 const OPTIONS: { kind: DraftKind; title: string; sub: string; primary?: boolean }[] = [
   { kind: "formal_message", title: "Prepare a formal message", sub: "An email you can send as it is", primary: true },
   { kind: "phone_script", title: "Create a phone script", sub: "What to say, in order, out loud" },

@@ -2,17 +2,6 @@
 
 import { useEffect, useRef } from "react";
 
-/**
- * What is being said, while it is being said.
- *
- * Not a chat log: there are no bubbles, no avatars and no timestamps, and only
- * the last few lines survive on screen. The point is to show that the system
- * is hearing you, then get out of the way — the moment worth looking at is the
- * brief, not the backlog.
- *
- * Earlier lines fade toward the top rather than scrolling away, so the screen
- * never fills with text the user has stopped caring about.
- */
 export function LiveTranscript({
   said, partial, agentLine, speaking, cutIn,
 }: {
@@ -46,7 +35,7 @@ export function LiveTranscript({
           <p
             key={`${i}-${line.slice(0, 12)}`}
             className="said rise text-[19px] leading-[1.55] transition-opacity duration-700 sm:text-[21px]"
-            // Older lines recede instead of scrolling off.
+
             style={{ opacity: [0.28, 0.55, 1][i + (3 - recent.length)] ?? 1 }}
           >
             {line}

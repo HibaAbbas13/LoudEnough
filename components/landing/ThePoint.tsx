@@ -1,10 +1,4 @@
-/**
- * Why this exists, before anyone has to speak.
- *
- * The idle page is otherwise an invitation with no outcome. Judges and
- * visitors should be able to see the job — messy speech in, a sendable
- * message out, with the gaps left as gaps — without starting a session.
- */
+
 const RULES = [
   {
     title: "You can cut in",

@@ -11,37 +11,22 @@ import { MessageView } from "@/components/brief/MessageView";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { ThePoint } from "@/components/landing/ThePoint";
 
-/**
- * One page, four moments: the invitation, the listening, the understanding,
- * and the thing you can send.
- *
- * They are not routes and not tabs. The wordmark shrinks, the orb moves up,
- * and the brief rises underneath it — so the transition reads as the same
- * conversation continuing rather than a wizard advancing. Nothing here is a
- * dashboard, because at no point is the user administering anything.
- */
 export default function Page() {
   const v = useVoiceAgent();
-  // Which draft the user has stepped back from. Comparing against the current
-  // one means a newly written draft shows itself without an effect to sync it.
+
   const [dismissed, setDismissed] = useState<Draft | null>(null);
 
-  // Once a session has begun the huge type gets out of the way.
   const opened = v.phase !== "idle" || v.said.length > 0 || v.stage !== "open";
 
-  // "One thing I need to know…" — inferred from the agent actually asking.
   const clarifying = v.agentLine.trim().endsWith("?");
 
   const level = v.phase === "speaking" ? v.agentLevel : v.micLevel;
   const showBrief = !!v.brief.problem;
   const showMessage = !!v.draft && v.draft !== dismissed;
-  // Stepping back from a written draft has to land on the options again, so
-  // this keys off having an actionable brief rather than off the furthest
-  // stage reached — otherwise "something else" is a dead end.
+
   const showActions =
     (v.stage === "action" || v.stage === "complete") && !v.drafting && !showMessage;
-  // What the user is actually looking at, which after stepping back is no
-  // longer the same as how far they have got.
+
   const viewStage = showMessage ? "complete" : showActions ? "action" : v.stage;
 
   return (
@@ -51,7 +36,7 @@ export default function Page() {
           opened ? "justify-start pt-10 sm:pt-14" : "justify-center py-10"
         }`}
       >
-        {/* Wordmark. Enormous until there is something more important on screen. */}
+        
         <header
           className="w-full text-center transition-all duration-[900ms] ease-[var(--ease)]"
           style={{
@@ -85,7 +70,7 @@ export default function Page() {
           )}
         </header>
 
-        {/* The voice object. Always the centre of the composition. */}
+        
         <div
           className="flex shrink-0 flex-col items-center"
           style={{ marginTop: opened ? "0.75rem" : "clamp(1rem, 3vh, 2rem)" }}
@@ -107,7 +92,7 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Entry controls, only before anything has been said. */}
+        
         {!opened && (
           <div className="fade mt-6 flex flex-col items-center gap-3">
             <button
@@ -128,7 +113,7 @@ export default function Page() {
           </div>
         )}
 
-        {/* Errors, in human language, with a way out of every one. */}
+        
         {v.error && (
           <div
             role="alert"
@@ -160,7 +145,7 @@ export default function Page() {
           </div>
         )}
 
-        {/* Live transcript, while the understanding is still forming. */}
+        
         {opened && !showBrief && !v.error && (
           <div className="mt-12 w-full">
             <LiveTranscript
@@ -173,10 +158,7 @@ export default function Page() {
           </div>
         )}
 
-        {/* What the agent said, kept on screen once the brief takes over the
-            transcript. Without this, everything the agent contributes is
-            audio-only, and the product stops working for anyone who can't
-            hear it. */}
+        
         {v.agentLine && showBrief && (
           <div className="fade mx-auto mt-9 max-w-md text-center">
             <p
@@ -189,7 +171,7 @@ export default function Page() {
           </div>
         )}
 
-        {/* The understanding. */}
+        
         {showBrief && !showMessage && (
           <div className="mt-10 w-full">
             <BriefView brief={v.brief} />
@@ -212,7 +194,7 @@ export default function Page() {
           </div>
         )}
 
-        {/* Proof the tools are real, not decorative. */}
+        
         {v.toolLog.length > 0 && (
           <p className="label mt-10 text-center">
             {v.toolLog.length} tool {v.toolLog.length === 1 ? "call" : "calls"} ·{" "}
@@ -220,7 +202,7 @@ export default function Page() {
           </p>
         )}
 
-        {v.connected && opened && (
+        {v.connected && opened && !showMessage && !showActions && (
           <div className="mt-10 flex flex-col items-center gap-3">
             {v.phase === "listening" && (
               <button
