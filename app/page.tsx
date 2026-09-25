@@ -33,16 +33,13 @@ export default function Page() {
     <>
       <main
         className={`relative z-10 flex min-h-dvh flex-col items-center px-6 pb-16 ${
-          opened ? "justify-start pt-10 sm:pt-14" : "justify-center py-10"
+          opened ? "justify-start pt-10 sm:pt-14" : "justify-center py-6"
         }`}
       >
         
         <header
           className="w-full text-center transition-all duration-[900ms] ease-[var(--ease)]"
-          style={{
-            maxWidth: opened ? "100%" : "56rem",
-            marginBottom: opened ? "0.5rem" : "0",
-          }}
+          style={{ marginBottom: opened ? "0.5rem" : "0" }}
         >
           {opened ? (
             <button
@@ -55,7 +52,10 @@ export default function Page() {
             </button>
           ) : (
             <>
-              <h1 className="fade font-medium leading-[0.84] tracking-[-0.045em] text-[clamp(3rem,min(16vw,13vh),8.5rem)]">
+              <h1
+                className="fade w-full font-medium leading-[0.82] tracking-[-0.045em]"
+                style={{ fontSize: "min(calc((100vw - 3rem) / 4.05), calc((100dvh - 26rem) / 1.64))" }}
+              >
                 LOUD
                 <br />
                 ENOUGH

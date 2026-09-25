@@ -14,7 +14,7 @@ export function VoiceOrb({
   level,
   onClick,
   disabled,
-  size = "clamp(160px, 23vh, 280px)",
+  size = "clamp(140px, min(16vw, 20vh), 220px)",
 }: {
   phase: Phase;
 
