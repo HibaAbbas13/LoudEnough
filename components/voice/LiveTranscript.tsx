@@ -14,12 +14,13 @@ import { useEffect, useRef } from "react";
  * never fills with text the user has stopped caring about.
  */
 export function LiveTranscript({
-  said, partial, agentLine, speaking,
+  said, partial, agentLine, speaking, cutIn,
 }: {
   said: string[];
   partial: string;
   agentLine: string;
   speaking: boolean;
+  cutIn: boolean;
 }) {
   const end = useRef<HTMLDivElement>(null);
 
@@ -33,7 +34,7 @@ export function LiveTranscript({
   if (nothingYet) {
     return (
       <p className="mx-auto max-w-xl text-center text-[15px] leading-relaxed text-[var(--text-faint)]">
-        Talk it out. It doesn&rsquo;t have to come out right.
+        Talk it out. When you&rsquo;re finished, pause — don&rsquo;t hang up.
       </p>
     );
   }
@@ -61,12 +62,17 @@ export function LiveTranscript({
       </div>
 
       {agentLine && (
-        <p
-          className="fade mx-auto mt-7 max-w-md border-t border-[var(--edge)] pt-5 text-center text-[14px] leading-relaxed text-[var(--text-soft)] transition-colors duration-500"
-          style={{ color: speaking ? "var(--signal)" : undefined }}
-        >
-          {agentLine}
-        </p>
+        <div className="fade mx-auto mt-7 max-w-md border-t border-[var(--edge)] pt-5 text-center">
+          <p
+            className="text-[14px] leading-relaxed text-[var(--text-soft)] transition-colors duration-500"
+            style={{ color: speaking ? "var(--signal)" : undefined }}
+          >
+            {agentLine}
+          </p>
+          {cutIn && (
+            <p className="label mt-3">You cut in</p>
+          )}
+        </div>
       )}
 
       <div ref={end} />

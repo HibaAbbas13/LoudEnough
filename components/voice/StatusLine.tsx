@@ -10,13 +10,15 @@ import type { Phase, Stage } from "@/lib/assembly/useVoiceAgent";
  * needs to know whether they are being heard.
  */
 export function StatusLine({
-  phase, stage, clarifying, drafting,
+  phase, stage, clarifying, drafting, cutIn,
 }: {
   phase: Phase;
   stage: Stage;
   /** The agent's last reply was a question. */
   clarifying: boolean;
   drafting: boolean;
+  /** The user spoke over the agent and playback was cut. */
+  cutIn: boolean;
 }) {
   let text: string;
 
@@ -24,11 +26,12 @@ export function StatusLine({
   else if (phase === "idle") text = stage === "complete" ? "You're ready to send." : "Ready when you are.";
   else if (phase === "connecting") text = "Connecting…";
   else if (drafting) text = "Putting it into words…";
-  else if (phase === "speaking") text = clarifying ? "One thing I need to know…" : "Loud Enough is speaking…";
+  else if (phase === "speaking") text = clarifying ? "One thing I need to know…" : "Speaking — talk over it to cut in.";
+  else if (cutIn && phase === "listening") text = "Stopped. Go ahead.";
   else if (phase === "thinking") text = "Making sense of that…";
   else if (stage === "complete") text = "You're ready to send.";
   else if (stage === "action") text = "What should we do with it?";
-  else text = "Listening…";
+  else text = "Listening — pause when you're done.";
 
   return (
     <p

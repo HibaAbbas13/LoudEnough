@@ -15,9 +15,9 @@ const display = Instrument_Serif({
 const mono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Loud Enough — you don't have to know how to say it",
+  title: "Loud Enough — say it badly, send it clearly",
   description:
-    "Talk it out, however it comes out. Loud Enough listens, works out what actually matters, asks only what's missing, and turns it into something you can send.",
+    "A voice agent you can interrupt. Talk through a problem out of order, and it turns what you actually said into a message you can send — with nothing invented.",
 };
 
 export const viewport: Viewport = {

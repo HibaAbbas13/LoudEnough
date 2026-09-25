@@ -9,6 +9,7 @@ import { BriefView } from "@/components/brief/BriefView";
 import { ActionPanel } from "@/components/brief/ActionPanel";
 import { MessageView } from "@/components/brief/MessageView";
 import { HowItWorks } from "@/components/landing/HowItWorks";
+import { ThePoint } from "@/components/landing/ThePoint";
 
 /**
  * One page, four moments: the invitation, the listening, the understanding,
@@ -78,7 +79,7 @@ export default function Page() {
                 You don&rsquo;t have to know how to say it.
               </p>
               <p className="fade mx-auto mt-2.5 max-w-sm text-[13.5px] leading-relaxed text-[var(--text-faint)]">
-                Talk it out. We&rsquo;ll help you make sense of it.
+                Say it badly. Leave with something you can send.
               </p>
             </>
           )}
@@ -101,6 +102,7 @@ export default function Page() {
               stage={viewStage}
               clarifying={clarifying}
               drafting={v.drafting}
+              cutIn={v.cutIn}
             />
           </div>
         </div>
@@ -166,6 +168,7 @@ export default function Page() {
               partial={v.partial}
               agentLine={v.agentLine}
               speaking={v.phase === "speaking"}
+              cutIn={v.cutIn}
             />
           </div>
         )}
@@ -175,12 +178,15 @@ export default function Page() {
             audio-only, and the product stops working for anyone who can't
             hear it. */}
         {v.agentLine && showBrief && (
-          <p
-            className="fade mx-auto mt-9 max-w-md text-center text-[14px] leading-relaxed transition-colors duration-500"
-            style={{ color: v.phase === "speaking" ? "var(--signal)" : "var(--text-soft)" }}
-          >
-            {v.agentLine}
-          </p>
+          <div className="fade mx-auto mt-9 max-w-md text-center">
+            <p
+              className="text-[14px] leading-relaxed transition-colors duration-500"
+              style={{ color: v.phase === "speaking" ? "var(--signal)" : "var(--text-soft)" }}
+            >
+              {v.agentLine}
+            </p>
+            {v.cutIn && <p className="label mt-3">You cut in</p>}
+          </div>
         )}
 
         {/* The understanding. */}
@@ -215,21 +221,34 @@ export default function Page() {
         )}
 
         {v.connected && opened && (
-          <button
-            type="button"
-            onClick={() => {
-              setDismissed(null);
-              v.reset();
-            }}
-            className="mt-10 text-[13px] text-[var(--text-faint)] underline underline-offset-4 transition-colors hover:text-[var(--text-soft)]"
-          >
-            End conversation
-          </button>
+          <div className="mt-10 flex flex-col items-center gap-3">
+            {v.phase === "listening" && (
+              <button
+                type="button"
+                onClick={v.finishTurn}
+                className="rounded-md px-7 py-3 text-[15px] font-medium text-[var(--void)] transition-opacity hover:opacity-90"
+                style={{ background: "var(--signal)" }}
+              >
+                I&rsquo;m done talking
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setDismissed(null);
+                v.reset();
+              }}
+              className="text-[13px] text-[var(--text-faint)] underline underline-offset-4 transition-colors hover:text-[var(--text-soft)]"
+            >
+              Start over
+            </button>
+          </div>
         )}
       </main>
 
       {!opened && (
         <div className="relative z-10 border-t border-[var(--edge)]">
+          <ThePoint />
           <HowItWorks />
         </div>
       )}

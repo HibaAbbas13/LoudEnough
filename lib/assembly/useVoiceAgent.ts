@@ -62,6 +62,7 @@ export function useVoiceAgent() {
 
   const [micLevel, setMicLevel] = useState(0);
   const [agentLevel, setAgentLevel] = useState(0);
+  const [cutIn, setCutIn] = useState(false);
 
   const ws = useRef<WebSocket | null>(null);
   const ctx = useRef<AudioContext | null>(null);
@@ -84,6 +85,8 @@ export function useVoiceAgent() {
   const clip = useRef<string | null>(null);
   const clipStop = useRef<(() => void) | null>(null);
   const pending = useRef<{ call_id: string; result: unknown; is_error?: boolean }[]>([]);
+  const phaseRef = useRef<Phase>("idle");
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   // Amplitude arrives ~60x a second. Rendering the page that often to move a
   // canvas nobody diffs is waste, so values are quantised and only committed
@@ -309,6 +312,12 @@ export function useVoiceAgent() {
           // A non-fatal error left the banner up while the session carried on.
           // Speaking again is the user retrying, so the warning goes.
           setError(null);
+          // Cut playback the moment speech is detected, rather than waiting for
+          // reply.done. That round trip is the second that makes it feel like a form.
+          if (phaseRef.current === "speaking" || playing.current.length > 0) {
+            flushPlayback();
+            setCutIn(true);
+          }
           setPhase("listening");
           break;
 
@@ -328,6 +337,7 @@ export function useVoiceAgent() {
 
         case "reply.started":
           lastEvent.current = "reply.started";
+          setCutIn(false);
           setAgentLine("");
           setPhase("thinking");
           break;
@@ -373,6 +383,7 @@ export function useVoiceAgent() {
           if (msg.status === "interrupted") {
             flushPlayback();
             pending.current = []; // the agent moved on; stale results would confuse it
+            setCutIn(true);
           } else {
             flushTools();
           }
@@ -488,6 +499,7 @@ export function useVoiceAgent() {
           tools: TOOLS,
           input: {
             format: { encoding: "audio/pcm" },
+            transcription_mode: "min_latency",
             turn_detection: {
               // People telling a difficult story pause mid-sentence to find the
               // words. A short silence window would cut them off constantly, so
@@ -561,6 +573,17 @@ export function useVoiceAgent() {
     setPhase("idle");
   }, [cleanup]);
 
+  /** Force a reply when the user is done talking, instead of waiting on silence. */
+  const finishTurn = useCallback(() => {
+    if (!alive.current) return;
+    send({
+      type: "reply.create",
+      instructions:
+        "The user has finished speaking. Respond now based on everything they said. If you can name the problem and what they want, call create_communication_brief. Do not ask them to repeat themselves.",
+    });
+    setPhase("thinking");
+  }, [send]);
+
   const reset = useCallback(() => {
     cleanup();
     spoken.current = "";
@@ -575,6 +598,7 @@ export function useVoiceAgent() {
     setError(null);
     setStage("open");
     setPhase("idle");
+    setCutIn(false);
   }, [cleanup]);
 
   /**
@@ -609,10 +633,10 @@ export function useVoiceAgent() {
   const connected = phase !== "idle" && phase !== "error" && phase !== "connecting";
 
   return {
-    phase, stage, connected, error, micDenied,
+    phase, stage, connected, error, micDenied, cutIn,
     partial, said, agentLine,
     brief, draft, drafting, toolLog,
     micLevel, agentLevel,
-    start, startDemo, stop, reset, chooseAction,
+    start, startDemo, stop, finishTurn, reset, chooseAction,
   };
 }

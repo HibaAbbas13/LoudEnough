@@ -9,7 +9,7 @@ const STEPS = [
   {
     n: "01",
     title: "Listen",
-    body: "AssemblyAI's Voice Agent API handles the whole spoken loop over one WebSocket — speech in, speech out, turn detection, barge-in. The silence window is widened deliberately, so trailing off mid-sentence doesn't end your turn.",
+    body: "Speech in and speech out over one WebSocket. Trailing off mid-thought doesn't end your turn — and the moment you talk over a reply, playback stops, so it stays a conversation instead of a recording.",
   },
   {
     n: "02",
@@ -37,7 +37,7 @@ const BUILT_WITH = [
 
 export function HowItWorks() {
   return (
-    <section className="mx-auto w-full max-w-3xl px-6 pb-24 pt-28 sm:pt-36">
+    <section className="mx-auto w-full max-w-3xl px-6 pb-24 pt-16 sm:pt-20">
       <p className="label">How it works</p>
 
       <div className="mt-10 grid gap-x-10 gap-y-9 sm:grid-cols-2">
